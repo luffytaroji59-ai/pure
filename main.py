@@ -56,13 +56,11 @@ html_content = response.text
 # Split into lines
 lines = html_content.split('\n')
 
-# Find the line with "fa fa-exclamation-circle" and print next 2 lines
+# Find the line with "fa fa-exclamation-circle" and print only the 2nd line after it
 for i, line in enumerate(lines):
     if 'fa fa-exclamation-circle' in line:
         print(f"Found at line {i}: {line.strip()}")
-        print("\nNext 2 lines:")
-        if i + 1 < len(lines):
-            print(f"Line {i+1}: {lines[i+1].strip()}")
+        print("\n2nd line after:")
         if i + 2 < len(lines):
             print(f"Line {i+2}: {lines[i+2].strip()}")
         print()  # Empty line for readability
