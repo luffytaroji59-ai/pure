@@ -198,41 +198,105 @@ def login_to_crunchyroll(driver):
         # Navigate to login page
         log(f"Navigating to login page...", "INFO")
         driver.get(LOGIN_URL)
-        time.sleep(3)
+        time.sleep(5)  # Increased wait time
         
         if SAVE_SCREENSHOTS:
             take_screenshot(driver, "01_login_page")
         
-        # Wait for page to load
-        log("Waiting for page to load...", "INFO")
-        time.sleep(2)
+        # Wait for page to load and JavaScript to execute
+        log("Waiting for page to fully load (JavaScript rendering)...", "INFO")
+        time.sleep(5)  # Give more time for dynamic content
+        
+        # Check if we need to click through any intermediate pages
+        log("Checking for intermediate buttons...", "INFO")
+        try:
+            # Look for "Log In" or "Sign In" link/button on landing page
+            intermediate_buttons = [
+                (By.XPATH, "//a[contains(text(), 'Log In')]"),
+                (By.XPATH, "//button[contains(text(), 'Log In')]"),
+                (By.XPATH, "//a[contains(text(), 'Sign In')]"),
+                (By.CSS_SELECTOR, "a[href*='login']"),
+            ]
+            
+            for by, selector in intermediate_buttons:
+                try:
+                    button = driver.find_element(by, selector)
+                    log(f"Found intermediate button, clicking it...", "INFO")
+                    button.click()
+                    time.sleep(3)
+                    if SAVE_SCREENSHOTS:
+                        take_screenshot(driver, "01b_after_button_click")
+                    break
+                except:
+                    continue
+        except:
+            pass
+        
+        # Debug: Print current page info
+        log(f"Current URL: {driver.current_url}", "INFO")
+        log(f"Page title: {driver.title}", "INFO")
+        
+        # Debug: Find all input fields
+        try:
+            all_inputs = driver.find_elements(By.TAG_NAME, "input")
+            log(f"Found {len(all_inputs)} input fields on page", "INFO")
+            for i, inp in enumerate(all_inputs[:5], 1):  # Show first 5
+                input_type = inp.get_attribute("type")
+                input_name = inp.get_attribute("name")
+                input_id = inp.get_attribute("id")
+                input_placeholder = inp.get_attribute("placeholder")
+                log(f"  Input {i}: type={input_type}, name={input_name}, id={input_id}, placeholder={input_placeholder}", "DEBUG")
+        except Exception as e:
+            log(f"Could not debug inputs: {e}", "WARNING")
         
         # Find email input field
         log("Looking for email input field...", "INFO")
         email_input = None
         
-        # Try multiple selectors
+        # Try multiple selectors (more comprehensive)
         email_selectors = [
             (By.ID, "email"),
             (By.NAME, "email"),
+            (By.ID, "username"),
+            (By.NAME, "username"),
             (By.CSS_SELECTOR, "input[type='email']"),
             (By.CSS_SELECTOR, "input[name='email']"),
+            (By.CSS_SELECTOR, "input[name='username']"),
+            (By.CSS_SELECTOR, "input[autocomplete='email']"),
+            (By.CSS_SELECTOR, "input[autocomplete='username']"),
             (By.XPATH, "//input[@type='email']"),
+            (By.XPATH, "//input[@name='email']"),
+            (By.XPATH, "//input[@name='username']"),
+            (By.XPATH, "//input[contains(@placeholder, 'email')]"),
+            (By.XPATH, "//input[contains(@placeholder, 'Email')]"),
+            (By.XPATH, "//input[contains(@id, 'email')]"),
+            (By.XPATH, "//input[contains(@id, 'user')]"),
         ]
         
         for by, selector in email_selectors:
             try:
                 email_input = driver.find_element(by, selector)
-                if email_input:
+                if email_input and email_input.is_displayed():
                     log(f"Found email input using {by}: {selector}", "SUCCESS")
                     break
+                else:
+                    email_input = None
             except:
                 continue
         
         if not email_input:
             log("Could not find email input field!", "ERROR")
+            log("Please check screenshots to see what's on the page", "ERROR")
             if SAVE_SCREENSHOTS:
                 take_screenshot(driver, "error_no_email_field")
+            
+            # Try to print page source preview
+            try:
+                page_source = driver.page_source[:2000]
+                log(f"Page source preview: {page_source}", "DEBUG")
+            except:
+                pass
+            
             return False
         
         # Enter email
