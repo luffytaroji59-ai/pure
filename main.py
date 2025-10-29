@@ -7,21 +7,20 @@ Uses Anti-Captcha service to automatically solve reCAPTCHA challenges
 import requests
 import json
 import time
-import os
 import sys
 from datetime import datetime
 from anticaptchaofficial.recaptchav3proxyless import recaptchaV3Proxyless
 
 # ============================================================================
-# CONFIGURATION
+# CONFIGURATION - Update these values
 # ============================================================================
 
-# API Key - can be set via environment variable or directly here
-ANTI_CAPTCHA_API_KEY = os.getenv('ANTI_CAPTCHA_API_KEY', 'YOUR_API_KEY_HERE')
+# Anti-Captcha API Key - Get from: https://anti-captcha.com/clients/settings/apisetup
+ANTI_CAPTCHA_API_KEY = "YOUR_API_KEY_HERE"
 
-# Login credentials - can be set via environment variables
-EMAIL = os.getenv('CRUNCHYROLL_EMAIL', 'luffytaroji50@gmail.com')
-PASSWORD = os.getenv('CRUNCHYROLL_PASSWORD', 'luffytaroji50@gmail.com')
+# Login credentials
+EMAIL = "luffytaroji50@gmail.com"
+PASSWORD = "luffytaroji50@gmail.com"
 
 # reCAPTCHA settings
 WEBSITE_URL = "https://sso.crunchyroll.com/login?return_url=%2Fauthorize%3Fclient_id%3Dkmj7imhjt_q90lcbzzsj%26redirect_uri%3Dhttps%253A%252F%252Fwww.crunchyroll.com%252Fcallback%26response_type%3Dcookie%26state%3D%252Fdiscover"
@@ -115,6 +114,7 @@ def log(message, level="INFO"):
 
 def load_cookies_from_file(filepath='cookies.json'):
     """Load cookies from JSON file if exists"""
+    import os
     if os.path.exists(filepath):
         try:
             with open(filepath, 'r') as f:
@@ -138,10 +138,8 @@ def check_api_key():
     """Validate API key configuration"""
     if ANTI_CAPTCHA_API_KEY == "YOUR_API_KEY_HERE" or not ANTI_CAPTCHA_API_KEY:
         log("Anti-Captcha API key not configured!", "ERROR")
-        print("\n    Configuration options:")
-        print("    1. Set environment variable: export ANTI_CAPTCHA_API_KEY='your_key'")
-        print("    2. Edit main.py and set: ANTI_CAPTCHA_API_KEY = 'your_key'")
-        print("\n    Get your API key: https://anti-captcha.com/clients/settings/apisetup\n")
+        print("\n    Edit main.py and set: ANTI_CAPTCHA_API_KEY = 'your_key'")
+        print("    Get your API key: https://anti-captcha.com/clients/settings/apisetup\n")
         return False
     
     log(f"API Key configured: {ANTI_CAPTCHA_API_KEY[:8]}...{ANTI_CAPTCHA_API_KEY[-4:]}", "SUCCESS")
@@ -169,8 +167,7 @@ def check_balance():
             elif balance < 0.10:
                 log("Low balance warning! Consider adding funds.", "WARNING")
             
-            # Calculate approximate solves remaining
-            cost_per_solve = 0.002  # Approximate cost
+            cost_per_solve = 0.002
             solves_remaining = int(balance / cost_per_solve)
             log(f"Estimated solves remaining: ~{solves_remaining}", "INFO")
             return True
@@ -218,7 +215,6 @@ def solve_recaptcha_v3(attempt=1):
             log(f"Token length: {len(g_response)} characters", "INFO")
             log(f"Token preview: {g_response[:80]}...", "DEBUG")
             
-            # Save token if enabled
             if SAVE_TOKENS:
                 save_token_to_file(g_response)
             
@@ -228,7 +224,6 @@ def solve_recaptcha_v3(attempt=1):
             log(f"Failed to solve reCAPTCHA ✗", "ERROR")
             log(f"Error code: {error_code}", "ERROR")
             
-            # Detailed error messages
             error_messages = {
                 'ERROR_ZERO_BALANCE': 'Insufficient balance - add funds to your account',
                 'ERROR_KEY_DOES_NOT_EXIST': 'Invalid API key - check your configuration',
@@ -271,7 +266,6 @@ def send_login_request(recaptcha_token):
     log("Sending Login Request to Crunchyroll", "INFO")
     log("=" * 60, "INFO")
     
-    # Prepare payload
     payload = [
         {
             "email": EMAIL,
@@ -293,7 +287,6 @@ def send_login_request(recaptcha_token):
     log("Sending POST request...", "INFO")
     
     try:
-        # Create session for better connection handling
         session = requests.Session()
         session.cookies.update(cookies)
         session.headers.update(headers)
@@ -308,7 +301,6 @@ def send_login_request(recaptcha_token):
         log("Response received!", "SUCCESS")
         log(f"Status Code: {response.status_code} ({response.reason})", "INFO")
         
-        # Log important headers
         important_headers = ['content-type', 'location', 'set-cookie', 'content-length', 'x-request-id']
         for header in important_headers:
             if header in response.headers:
@@ -317,14 +309,11 @@ def send_login_request(recaptcha_token):
                     value = str(value)[:100] + "..."
                 log(f"Header {header}: {value}", "DEBUG")
         
-        # Log response preview
         response_preview = response.text[:500] if len(response.text) > 0 else "(empty)"
         log(f"Response preview ({len(response.text)} chars): {response_preview}...", "DEBUG")
         
-        # Analyze response
         analyze_response(response)
         
-        # Save response if enabled
         if SAVE_RESPONSES:
             save_response_to_file(response)
         
@@ -349,7 +338,6 @@ def analyze_response(response):
     status_code = response.status_code
     response_text = response.text.lower()
     
-    # Success indicators
     if status_code == 200:
         log("Status 200 OK - Request accepted ✓", "SUCCESS")
         
@@ -394,7 +382,6 @@ def analyze_response(response):
         log(f"{status_code} Server Error - Crunchyroll server issue ✗", "ERROR")
         log("Try again later", "WARNING")
     
-    # Check for specific error messages
     if 'recaptcha' in response_text and 'invalid' in response_text:
         log("reCAPTCHA validation failed - token rejected", "ERROR")
     if 'cloudflare' in response_text or 'challenge' in response_text:
@@ -458,23 +445,19 @@ def main():
     
     print_banner()
     
-    # Configuration check
     log("Checking configuration...", "INFO")
     if not check_api_key():
         return 1
     
-    # Check balance
     if not check_balance():
         return 1
     
-    # Load custom cookies if available
     custom_cookies = load_cookies_from_file()
     if custom_cookies:
         cookies.update(custom_cookies)
     
     log("Starting reCAPTCHA solving process...", "INFO")
     
-    # Solve reCAPTCHA with retries
     recaptcha_token = None
     for attempt in range(1, MAX_RETRIES + 1):
         recaptcha_token = solve_recaptcha_v3(attempt)
@@ -492,7 +475,6 @@ def main():
         print_summary(False, elapsed_time)
         return 1
     
-    # Send login request
     log("Proceeding to login request...", "INFO")
     response = send_login_request(recaptcha_token)
     
@@ -502,7 +484,6 @@ def main():
         print_summary(False, elapsed_time)
         return 1
     
-    # Determine success
     success = response.status_code == 200 or (300 <= response.status_code < 400)
     
     elapsed_time = time.time() - start_time
