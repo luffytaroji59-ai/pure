@@ -250,11 +250,14 @@ def login_to_crunchyroll(driver):
             log(f"Could not debug inputs: {e}", "WARNING")
         
         # Find email input field
-        log("Looking for email input field...", "INFO")
+        log("Looking for email/login input field...", "INFO")
         email_input = None
         
-        # Try multiple selectors (more comprehensive)
+        # Try multiple selectors - Crunchyroll uses name="login" and type="text"!
         email_selectors = [
+            (By.NAME, "login"),  # ← Crunchyroll uses this!
+            (By.CSS_SELECTOR, "input[name='login']"),
+            (By.XPATH, "//input[@name='login']"),
             (By.ID, "email"),
             (By.NAME, "email"),
             (By.ID, "username"),
@@ -311,19 +314,21 @@ def login_to_crunchyroll(driver):
         password_input = None
         
         password_selectors = [
+            (By.CSS_SELECTOR, "input[type='password']"),  # Most reliable
+            (By.XPATH, "//input[@type='password']"),
             (By.ID, "password"),
             (By.NAME, "password"),
-            (By.CSS_SELECTOR, "input[type='password']"),
             (By.CSS_SELECTOR, "input[name='password']"),
-            (By.XPATH, "//input[@type='password']"),
         ]
         
         for by, selector in password_selectors:
             try:
                 password_input = driver.find_element(by, selector)
-                if password_input:
+                if password_input and password_input.is_displayed():
                     log(f"Found password input using {by}: {selector}", "SUCCESS")
                     break
+                else:
+                    password_input = None
             except:
                 continue
         
@@ -344,24 +349,42 @@ def login_to_crunchyroll(driver):
             take_screenshot(driver, "02_credentials_entered")
         
         # Find submit button
-        log("Looking for login button...", "INFO")
+        log("Looking for login/submit button...", "INFO")
         submit_button = None
         
         button_selectors = [
             (By.CSS_SELECTOR, "button[type='submit']"),
-            (By.XPATH, "//button[contains(text(), 'Log In')]"),
-            (By.XPATH, "//button[contains(text(), 'Sign In')]"),
             (By.XPATH, "//button[@type='submit']"),
+            (By.XPATH, "//button[contains(text(), 'Log In')]"),
+            (By.XPATH, "//button[contains(text(), 'LOG IN')]"),
+            (By.XPATH, "//button[contains(text(), 'Sign In')]"),
+            (By.XPATH, "//button[contains(text(), 'SIGN IN')]"),
+            (By.XPATH, "//button[contains(., 'Log In')]"),
+            (By.XPATH, "//button[contains(., 'Sign In')]"),
             (By.CSS_SELECTOR, "button.submit"),
             (By.CSS_SELECTOR, "input[type='submit']"),
+            (By.TAG_NAME, "button"),  # Fallback: any button
         ]
         
         for by, selector in button_selectors:
             try:
-                submit_button = driver.find_element(by, selector)
-                if submit_button:
-                    log(f"Found submit button using {by}: {selector}", "SUCCESS")
-                    break
+                if by == By.TAG_NAME:
+                    # Get all buttons and find visible ones
+                    buttons = driver.find_elements(by, selector)
+                    for btn in buttons:
+                        if btn.is_displayed() and btn.get_attribute("type") == "submit":
+                            submit_button = btn
+                            log(f"Found submit button (fallback method)", "SUCCESS")
+                            break
+                    if submit_button:
+                        break
+                else:
+                    submit_button = driver.find_element(by, selector)
+                    if submit_button and submit_button.is_displayed():
+                        log(f"Found submit button using {by}: {selector}", "SUCCESS")
+                        break
+                    else:
+                        submit_button = None
             except:
                 continue
         
