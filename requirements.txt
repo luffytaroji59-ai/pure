@@ -1,2 +1,2 @@
-requests>=2.31.0
-anticaptchaofficial>=1.0.56
+undetected-chromedriver>=3.5.4
+selenium>=4.15.0
