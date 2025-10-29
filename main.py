@@ -115,39 +115,65 @@ def setup_driver():
     """Setup undetected Chrome driver"""
     log("Setting up Chrome driver...", "INFO")
     
-    options = uc.ChromeOptions()
+    # Try multiple methods to initialize driver
+    methods = [
+        {"version_main": None, "use_subprocess": False},
+        {"version_main": 141, "use_subprocess": False},
+        {"version_main": None, "use_subprocess": True},
+        {"use_subprocess": True},
+    ]
     
-    # Anti-detection settings
-    options.add_argument('--disable-blink-features=AutomationControlled')
-    options.add_argument('--disable-dev-shm-usage')
-    options.add_argument('--no-sandbox')
-    options.add_argument('--disable-gpu')
-    
-    # User agent
-    options.add_argument('--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36')
-    
-    # Window size
-    options.add_argument('--window-size=1920,1080')
-    
-    # Headless mode (optional)
-    if HEADLESS:
-        options.add_argument('--headless=new')
-        log("Running in headless mode", "INFO")
-    
-    try:
-        driver = uc.Chrome(options=options, version_main=None)
-        log("Chrome driver initialized successfully", "SUCCESS")
-        return driver
-    except Exception as e:
-        log(f"Failed to initialize Chrome driver: {e}", "ERROR")
-        log("Trying without version_main parameter...", "INFO")
+    for i, method in enumerate(methods, 1):
         try:
-            driver = uc.Chrome(options=options)
-            log("Chrome driver initialized successfully", "SUCCESS")
+            # Create fresh options for each attempt
+            options = uc.ChromeOptions()
+            
+            # Anti-detection settings
+            options.add_argument('--disable-blink-features=AutomationControlled')
+            options.add_argument('--disable-dev-shm-usage')
+            options.add_argument('--no-sandbox')
+            options.add_argument('--disable-gpu')
+            
+            # User agent
+            options.add_argument('--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36')
+            
+            # Window size
+            options.add_argument('--window-size=1920,1080')
+            
+            # Headless mode (optional)
+            if HEADLESS:
+                options.add_argument('--headless=new')
+                log("Running in headless mode", "INFO")
+            
+            log(f"Attempt {i}/{len(methods)}: Initializing with {method}...", "INFO")
+            driver = uc.Chrome(options=options, **method)
+            log("Chrome driver initialized successfully! ✓", "SUCCESS")
             return driver
-        except Exception as e2:
-            log(f"Failed again: {e2}", "ERROR")
-            return None
+            
+        except Exception as e:
+            error_msg = str(e)
+            log(f"Attempt {i} failed: {error_msg[:100]}...", "WARNING")
+            
+            # Check for specific errors
+            if "version" in error_msg.lower():
+                log("Version mismatch detected", "INFO")
+            
+            if i < len(methods):
+                log("Trying alternative method...", "INFO")
+            continue
+    
+    # All methods failed
+    log("All initialization methods failed", "ERROR")
+    log("", "INFO")
+    log("Troubleshooting steps:", "ERROR")
+    log("1. Update Chrome: https://www.google.com/chrome/", "INFO")
+    log("2. Update undetected-chromedriver:", "INFO")
+    log("   pip install --upgrade undetected-chromedriver", "INFO")
+    log("3. Clear driver cache:", "INFO")
+    log("   rm -rf ~/.local/share/undetected_chromedriver/  # Linux/Mac", "INFO")
+    log("   del %APPDATA%\\undetected_chromedriver\\*  # Windows", "INFO")
+    
+    return None
 
 def wait_for_element(driver, by, value, timeout=WAIT_TIMEOUT, description="element"):
     """Wait for element to be present"""
